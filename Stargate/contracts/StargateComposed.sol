@@ -2,12 +2,13 @@
 
 pragma solidity ^0.8.0;
 
+import "./libs/math/SafeMath.sol";
 import "./libs/access/Ownable.sol";
 import "./interfaces/IStargateReceiver.sol";
 import "./interfaces/IUniswapV2Router02.sol";
 
 contract StargateComposed is Ownable, IStargateReceiver {
-    // using SafeMath for uint256;
+    using SafeMath for uint256;
 
     address public stargateRouter;      // stargate router address 
     address public ammRouter;           // amm router (ie: sushiswap, uniswap, etc...)
@@ -153,7 +154,6 @@ contract StargateComposed is Ownable, IStargateReceiver {
     //function swapTokensForNative(...){}
 
     // 4. swap Tokens on source for Tokens on destination. 
-    //    left to the reader to decide how to implement
     function swapTokensForTokens(
         uint16 destChainId,             // Rinkeby: 10001, BSCtestnet: 10002
         uint stargatePoolId,            // 1 => USDC on testnets
@@ -217,8 +217,10 @@ contract StargateComposed is Ownable, IStargateReceiver {
             data
         );
 
+        require(msg.value.sub(l0Fee) > 0, "Insufficient l0 fee");
+
         // Stargate's Router.swap() function sends the tokens to the destination chain.
-        IStargateRouter(stargateRouter).swap(
+        IStargateRouter(stargateRouter).swap{value:l0Fee}(
             destChainId,
             stargatePoolId,
             msg.sender,                                     // refund adddress. if msg.sender pays too much gas, return extra eth
