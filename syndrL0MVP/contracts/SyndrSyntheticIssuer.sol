@@ -3,11 +3,12 @@ pragma solidity ^0.8.0;
 
 import "./libs/access/Ownable.sol";
 import "./libs/token/SafeERC20.sol";
+import "./libs/security/ReentrancyGuard.sol";
 import "./interfaces/IDToken.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/ISyndrSyntheticIssuer.sol";
 
-contract SyndrSyntheticIssuer is ISyndrSyntheticIssuer, Ownable {
+contract SyndrSyntheticIssuer is ISyndrSyntheticIssuer, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     string constant public dToken = "dETH";
@@ -186,7 +187,7 @@ contract SyndrSyntheticIssuer is ISyndrSyntheticIssuer, Ownable {
 
     //-----------------------------------------------------------------------------------------------------------------------
     // STARGATE RECEIVER - the destination contract must implement this function to receive the tokens and payload
-    function sgReceive(uint16 _chainId, bytes memory _srcAddress, uint _nonce, address _token, uint amountLD, bytes memory payload) override external {
+    function sgReceive(uint16 _chainId, bytes memory _srcAddress, uint , address _token, uint amountLD, bytes memory payload) override external nonReentrant {
         require(msg.sender == address(stargateRouter), "only stargate router can call sgReceive");
         require(_token == address(dai), "SSI: only supports dai as coll");
 
