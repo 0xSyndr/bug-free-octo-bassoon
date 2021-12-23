@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.0;
 
-interface ISyndrSyntheticIssuer {
+import "./Stargate/IStargateReceiver.sol";
+
+interface ISyndrSyntheticIssuer is IStargateReceiver {
 
 	// --- L0 Stargate functions ---
     function sgReceive(
