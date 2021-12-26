@@ -121,7 +121,7 @@ contract SyndrSyntheticIssuer is ISyndrSyntheticIssuer, Ownable, ReentrancyGuard
         dETH.mint(_vaultOwner, dETHDebt);
     }
 
-    function _addCollateral(uint daiCollAmt,address _vaultOwner) public {
+    function _addCollateral(uint daiCollAmt,address _vaultOwner) internal {
         require(vaultOpen, "dEth Vault is not open");
         require(_vaultOwner == vaultOwner, "SSI: caller must be vault owner");
 
@@ -133,7 +133,7 @@ contract SyndrSyntheticIssuer is ISyndrSyntheticIssuer, Ownable, ReentrancyGuard
         dai.safeTransferFrom(_vaultOwner, address(this), daiCollAmt);
     }
 
-    function _withdrawCollateral(uint daiCollAmt, address _vaultOwner) public {
+    function _withdrawCollateral(uint daiCollAmt, address _vaultOwner) internal {
         require(vaultOpen, "dEth Vault is not open");
         require(_vaultOwner == vaultOwner, "SSI: caller must be vault owner");
         require(daiCollAmt < daiColl, "Cannot withdraw more than the vault balance");
@@ -147,7 +147,7 @@ contract SyndrSyntheticIssuer is ISyndrSyntheticIssuer, Ownable, ReentrancyGuard
         dai.safeTransfer(_vaultOwner, daiCollAmt);
     }
 
-    function _withdrawDToken(uint dETHAmount, address _vaultOwner) public {
+    function _withdrawDToken(uint dETHAmount, address _vaultOwner) internal {
         require(vaultOpen, "dEth Vault is not open");
         require(_vaultOwner == vaultOwner, "SSI: caller must be vault owner");
 
@@ -159,7 +159,7 @@ contract SyndrSyntheticIssuer is ISyndrSyntheticIssuer, Ownable, ReentrancyGuard
         dETH.mint(_vaultOwner, dETHAmount);
     }
 
-    function _repayDToken(uint dETHAmount, address _vaultOwner) public {
+    function _repayDToken(uint dETHAmount, address _vaultOwner) internal {
         require(vaultOpen, "dEth Vault is not open");
         require(_vaultOwner == vaultOwner, "SSI: caller must be vault owner");
         require(dETHAmount < dTokenDebt, "Cannot repay more what has been borrowed");
