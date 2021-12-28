@@ -2,12 +2,15 @@
 pragma solidity ^0.8.0;
 
 import "./libs/Address.sol";
+import "./libs/BytesLib.sol";
+import "./libs/access/Ownable.sol";
 import "./libs/utils/Context.sol";
 import "./interfaces/IDToken.sol";
 import "./interfaces/LayerZero/ILayerZeroEndpoint.sol";
 
-contract DToken is Context, IDToken {
+contract DToken is Context, Ownable, IDToken {
     using Address for address;
+    using BytesLib for bytes;
 
     uint256 private _totalSupply;
     string private _name;
@@ -17,6 +20,12 @@ contract DToken is Context, IDToken {
     // User data for DToken
     mapping(address => uint256) private _balances;
     mapping(address => mapping(address => uint256)) private _allowances;
+
+    // token whitelist for diff chains
+    mapping(uint16 => bytes) private _srcTokenWhiteList;
+    mapping(uint16 => bool) private _isChainSupported;
+
+    uint16[] public supportedChains;
 
     // --- Addresses ---
     // This remains same on all chains as
@@ -109,7 +118,7 @@ contract DToken is Context, IDToken {
             _chainId,                       // destination chainId
             _dstMultiChainTokenAddr,        // destination address of MultiChainToken
             payload,                        // abi.encode()'ed bytes
-            payable(msg.sender),                     // refund address (LayerZero will refund any superflous gas back to caller of send()
+            payable(msg.sender),            // refund address (LayerZero will refund any superflous gas back to caller of send()
             address(0x0),                   // 'zroPaymentAddress' unused for this mock/example
             bytes("")                       // 'txParameters' unused for this mock/example
         );
@@ -117,8 +126,18 @@ contract DToken is Context, IDToken {
 
     // --- LayerZero function ---
 
-    function lzReceive(uint16 _srcChainId, bytes calldata _srcAddress, uint64 _nonce, bytes calldata _payload) external override {
+    // --- adding chain support ----
+    function whitelistChain(uint16 _chainId, bytes calldata _srcToken) external onlyOwner {
+        require(_isChainSupported[_chainId] == false, "Chain already supported!");
+        _isChainSupported[_chainId] = true;
+        _srcTokenWhiteList[_chainId] = _srcToken;
+        supportedChains.push(_chainId);
+    }
+
+    function lzReceive(uint16 _srcChainId, bytes calldata _srcAddress, uint64 , bytes calldata _payload) external override {
         require(msg.sender == address(endpoint)); // boilerplate! lzReceive must be called by the endpoint for security
+        require(_isChainSupported[_srcChainId] == true, "Chain not supported");
+        require(_srcAddress.equal(_srcTokenWhiteList[_srcChainId]), "_srcAddress is not whitelisted");
 
         // decode
         (address toAddr, uint qty) = abi.decode(_payload, (address, uint));
