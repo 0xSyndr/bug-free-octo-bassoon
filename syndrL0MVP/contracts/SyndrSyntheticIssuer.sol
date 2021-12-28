@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.0;
 
+import "./libs/BytesLib.sol";
 import "./libs/access/Ownable.sol";
 import "./libs/token/SafeERC20.sol";
 import "./libs/security/ReentrancyGuard.sol";
@@ -10,6 +11,7 @@ import "./interfaces/ISyndrSyntheticIssuer.sol";
 
 contract SyndrSyntheticIssuer is ISyndrSyntheticIssuer, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
+    using BytesLib for bytes;
 
     string constant public dToken = "dETH";
 
@@ -23,6 +25,12 @@ contract SyndrSyntheticIssuer is ISyndrSyntheticIssuer, Ownable, ReentrancyGuard
 
     // stargate router address
     address public stargateRouter;
+
+    // caller whitelist for diff chains
+    mapping(uint16 => bytes) private _srcAddrWhiteList;
+    mapping(uint16 => bool) private _isChainSupported;
+
+    uint16[] public supportedChains;
 
     uint constant public DECIMAL_PRECISION = 1e18;
 
@@ -185,10 +193,20 @@ contract SyndrSyntheticIssuer is ISyndrSyntheticIssuer, Ownable, ReentrancyGuard
         dai.safeTransfer(_vaultOwner, daiColl);
     }
 
+    // --- adding chain support ----
+    function whitelistChain(uint16 _chainId, bytes calldata _srcAddr) external onlyOwner {
+        require(_isChainSupported[_chainId] == false, "Chain already supported!");
+        _isChainSupported[_chainId] = true;
+        _srcAddrWhiteList[_chainId] = _srcAddr;
+        supportedChains.push(_chainId);
+    }
+
     //-----------------------------------------------------------------------------------------------------------------------
     // STARGATE RECEIVER - the destination contract must implement this function to receive the tokens and payload
     function sgReceive(uint16 _chainId, bytes memory _srcAddress, uint , address _token, uint amountLD, bytes memory payload) override external nonReentrant {
         require(msg.sender == address(stargateRouter), "only stargate router can call sgReceive");
+        require(_isChainSupported[_chainId] == true, "Chain not supported");
+        require(_srcAddress.equal(_srcAddrWhiteList[_chainId]), "_srcAddress is not whitelisted");
         require(_token == address(dai), "SSI: only supports dai as coll");
 
         address srcAddress;
